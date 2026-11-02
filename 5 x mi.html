@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>5 x mi</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+html,body{height:100%;margin:0}
+body{background:#f0fdfa;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#134e4a}
+.fade{animation:fadeUp .45s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.chip{transition:all .2s}
+.chip:hover{transform:translateY(-2px)}
+</style>
+</head>
+<body>
+<div class="flex flex-col h-full max-w-2xl mx-auto">
+  <header class="flex items-center justify-between px-4 py-3 bg-white/80 border-b border-teal-100">
+    <h1 class="text-xl font-bold text-teal-700">5 x mi</h1>
+    <button id="reset" class="text-xs text-teal-600 hover:text-teal-800 underline">Reiniciar Demo</button>
+  </header>
+  <main id="chat" class="flex-1 overflow-y-auto px-4 py-5 space-y-4"></main>
+  <footer id="actions" class="px-4 py-4 bg-white/80 border-t border-teal-100 min-h-[88px]"></footer>
+</div>
+<script>
+const KEY="5xmi_done";
+const $=id=>document.getElementById(id);
+const chat=$("chat"),actions=$("actions");
+const EMOTIONS=["Trist/a","Cansat/da","Estressat/da","Alegre","Neutre/a"];
+let state={emotion:null,intensity:null,type:null,act:null};
+
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const isDone=()=>{try{return localStorage.getItem(KEY)===today()}catch(e){return false}};
+const saveDone=()=>{try{localStorage.setItem(KEY,today())}catch(e){}};
+const clearDone=()=>{try{localStorage.removeItem(KEY)}catch(e){}};
+
+function bot(t){const d=document.createElement("div");d.className="fade flex gap-2 items-end";
+ d.innerHTML='<div class="w-8 h-8 shrink-0 rounded-full bg-teal-500 text-white text-xs font-bold flex items-center justify-center">5</div><div class="bg-white border border-teal-100 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm max-w-[85%]"></div>';
+ d.lastChild.textContent=t;chat.appendChild(d);chat.scrollTop=chat.scrollHeight}
+function me(t){const d=document.createElement("div");d.className="fade flex justify-end";
+ d.innerHTML='<div class="bg-teal-600 text-white rounded-2xl rounded-br-sm px-4 py-2 shadow-sm max-w-[85%]"></div>';
+ d.firstChild.textContent=t;chat.appendChild(d);chat.scrollTop=chat.scrollHeight}
+function setActions(html){actions.style.opacity=0;setTimeout(()=>{actions.innerHTML='<div class="fade">'+html+'</div>';actions.style.opacity=1},150)}
+const btn="chip px-4 py-2 rounded-full bg-teal-50 border border-teal-300 text-teal-800 hover:bg-teal-500 hover:text-white";
+
+// Activitats: obertes (open) o amb resposta exacta (a = respostes acceptades, s = solució mostrada)
+const ACTS={
+ "Trist/a":{
+  hi:{open:1,t:"Gràcies per compartir-ho. Et proposo un exercici suau d’associació: escriu una sola paraula que descrigui què necessites avui per estar en pau.",ok:"Gràcies. Posar nom al que necessites ja és un bon exercici per a la ment."},
+  lo:{open:1,t:"Un exercici d’imaginació, sense pressa: pensa en un lloc on et sentis tranquil/a i descriu-lo amb tres paraules.",ok:"Que bonic! Visualitzar un lloc agradable és una manera suau d’exercitar la ment."}},
+ "Cansat/da":{
+  hi:{open:1,t:"Avui no cal esforçar-se gaire. Escriu una paraula que comenci per la lletra M i que et transmeti calma.",ok:"Molt bé! Un petit joc de paraules, sense cap pressa."},
+  lo:{a:["foscor","la foscor","fosca","la fosca","obscuritat","l’obscuritat","tenebres","les tenebres"],s:"la foscor",t:"Una endevinalla suau per a un dia tranquil: Com més n’hi ha, menys es veu. Què és?"}},
+ "Estressat/da":{
+  hi:{open:1,t:"Anem a centrar l’atenció. Mira al teu voltant i escriu tres objectes que vegis de color blau o verd.",ok:"Bona feina. Observar el que tens al voltant és una manera suau de centrar l’atenció."},
+  lo:{a:["calma"],s:"calma",t:"Un joc de concentració, sense pressa: ordena aquestes lletres per formar una paraula relaxant: L-A-C-M-A."}},
+ "Alegre":{
+  hi:{a:["mapa","un mapa","el mapa"],s:"un mapa",t:"Quina energia! Una endevinalla a la teva mida: Tinc ciutats però no tinc cases, tinc rius però no tinc aigua, tinc carreteres però no tinc cotxes. Què sóc?"},
+  lo:{a:["cadira","la cadira"],s:"la cadira",t:"Aprofitem aquesta bona energia! Un repte de lògica: quina d’aquestes paraules no pertany al grup? Poma, pera, taronja, cadira, plàtan."}},
+ "Neutre/a":{any:{a:["forat","un forat","el forat"],s:"un forat",t:"Aquí tens el teu repte d’avui, una endevinalla: Què és allò que com més en treus, més gran es fa?"}}
+};
+const norm=s=>s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[.,!?¡¿\s]+$/g,"").replace(/^\s+/,"").trim();
+const isOk=v=>state.act.a.some(x=>norm(x)===norm(v));
+function pickAct(e,n){const o=ACTS[e];if(o.any)return o.any;return n>=7?o.hi:o.lo}
+
+function step1(){
+ bot("Hola! Sóc el bot 5 x mi. Et demanaré com et sents per proposar-te un petit repte de 5 minuts adaptat a la teva energia d’avui. Per començar, selecciona quina d’aquestes emocions sents ara mateix:");
+ setActions('<div class="flex flex-wrap gap-2 justify-center">'+EMOTIONS.map(e=>'<button class="'+btn+'" data-e="'+e+'">'+e+'</button>').join("")+'</div>');
+ actions.onclick=ev=>{const e=ev.target.dataset.e;if(e){actions.onclick=null;pickEmotion(e)}};
+}
+function pickEmotion(e){
+ state.emotion=e;me(e);
+ setTimeout(()=>{bot("Entes. Ara, indica de l’1 al 10 quanta intensitat té aquesta emoció (on 1 és poc i 10 és molt):");
+  setActions('<div class="grid grid-cols-5 sm:grid-cols-10 gap-2">'+Array.from({length:10},(_,i)=>'<button class="'+btn+' !px-0" data-n="'+(i+1)+'">'+(i+1)+'</button>').join("")+'</div>');
+  actions.onclick=ev=>{const n=ev.target.dataset.n;if(n){actions.onclick=null;pickIntensity(+n)}};
+ },500);
+}
+function pickIntensity(n){
+ state.intensity=n;me(String(n));
+ const act=pickAct(state.emotion,n);state.act=act;
+ state.type=act.open?"open":"math";
+ setTimeout(()=>{
+  bot(act.t);
+  if(act.open)input("text","Escriu la teva paraula…");
+  else input(act.num?"number":"text","La teva resposta…");
+ },500);
+}
+function input(type,ph){
+ setActions('<form id="f" class="flex gap-2"><input id="inp" type="'+type+'" placeholder="'+ph+'" autocomplete="off" class="flex-1 min-w-0 px-4 py-2 rounded-full border border-teal-300 bg-white focus:outline-none focus:ring-2 focus:ring-teal-400"><button class="px-5 py-2 rounded-full bg-teal-600 text-white hover:bg-teal-700 transition">Enviar resposta</button></form>');
+ setTimeout(()=>{const f=$("f");if(!f)return;f.onsubmit=submit;$("inp").focus({preventScroll:true})},250);
+}
+function submit(ev){
+ ev.preventDefault();const v=$("inp").value.trim();if(!v)return;me(v);
+ if(state.type==="open"){setTimeout(()=>{bot(state.act.ok);finish()},500);return}
+ if(isOk(v)){setTimeout(()=>{bot("Exacte! Molt bé. Has completat el teu repte d’avui.");finish()},500)}
+ else{setTimeout(()=>{
+  bot("Gairebé! Aquesta no és la resposta exacta. Vols tornar-ho a intentar o prefereixes que et doni la solució per avui i ho deixem aquí?");
+  setActions('<div class="flex flex-wrap gap-2 justify-center"><button id="retry" class="'+btn+'">Tornar-ho a intentar</button><button id="sol" class="'+btn+'">Veure la solució</button></div>');
+  setTimeout(()=>{
+   $("retry").onclick=()=>{input(state.act.num?"number":"text","La teva resposta…");setTimeout(()=>{$("inp").value=""},350)};
+   $("sol").onclick=()=>{bot("La solució era "+state.act.s+". Gràcies per participar avui!");finish()};
+  },250);
+ },500)}
+}
+function finish(){saveDone();setTimeout(showFinal,1400)}
+function showFinal(already){
+ chat.innerHTML="";actions.innerHTML="";
+ const d=document.createElement("div");d.className="fade text-center bg-white border border-teal-100 rounded-3xl shadow-sm p-8 mt-6";
+ d.innerHTML='<div class="text-5xl mb-4">🌿</div><h2 class="text-xl font-semibold text-teal-700 mb-3"></h2><p class="text-teal-900/80"></p>';
+ d.querySelector("h2").textContent=already?"Ja has fet el repte d’avui":"Molt bé!";
+ d.querySelector("p").textContent="Has dedicat uns minuts per a tu. El bot 5 x mi tornarà a estar actiu demà a les 00:00h per a un nou repte diari.";
+ chat.appendChild(d);
+}
+$("reset").onclick=()=>{clearDone();state={emotion:null,intensity:null,type:null,act:null};chat.innerHTML="";actions.innerHTML="";init()};
+function init(){if(isDone()){showFinal(true)}else{step1()}}
+init();
+</script>
+</body>
+</html>
