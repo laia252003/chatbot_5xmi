@@ -66,13 +66,13 @@ const isOk=v=>state.act.a.some(x=>norm(x)===norm(v));
 function pickAct(e,n){const o=ACTS[e];if(o.any)return o.any;return n>=7?o.hi:o.lo}
 
 function step1(){
- bot("Hola! Sóc el bot 5 x mi. Et demanaré com et sents per proposar-te un petit repte de 5 minuts adaptat a la teva energia d’avui. Per començar, selecciona quina d’aquestes emocions sents ara mateix:");
+ bot("Hola! Sóc el bot 5 x mi, tens 5 minuts per exercitar la teva ment amb un petit repte? Digue’m com et sents avui seleccionant un dels botons");
  setActions('<div class="flex flex-wrap gap-2 justify-center">'+EMOTIONS.map(e=>'<button class="'+btn+'" data-e="'+e+'">'+e+'</button>').join("")+'</div>');
  actions.onclick=ev=>{const e=ev.target.dataset.e;if(e){actions.onclick=null;pickEmotion(e)}};
 }
 function pickEmotion(e){
  state.emotion=e;me(e);
- setTimeout(()=>{bot("Entes. Ara, indica de l’1 al 10 quanta intensitat té aquesta emoció (on 1 és poc i 10 és molt):");
+ setTimeout(()=>{bot("EAra, escriu-me de l'1 al 10 quanta intensitat té aquesta emoció (on 1 és poc i 10 és molt):");
   setActions('<div class="grid grid-cols-5 sm:grid-cols-10 gap-2">'+Array.from({length:10},(_,i)=>'<button class="'+btn+' !px-0" data-n="'+(i+1)+'">'+(i+1)+'</button>').join("")+'</div>');
   actions.onclick=ev=>{const n=ev.target.dataset.n;if(n){actions.onclick=null;pickIntensity(+n)}};
  },500);
